@@ -69,35 +69,35 @@ directionDomain = {
 }
 
 countyFipsDomain = {
-    49025: 'KANE',
-    49027: 'MILLARD',
-    49039: 'SANPETE',
-    49007: 'CARBON',
-    49049: 'UTAH',
-    49005: 'CACHE',
-    49043: 'SUMMIT',
-    49053: 'WASHINGTON',
-    49019: 'GRAND',
-    49047: 'UINTAH',
-    49045: 'TOOELE',
-    49041: 'SEVIER',
-    49017: 'GARFIELD',
-    49003: 'BOX ELDER',
-    49021: 'IRON',
-    49057: 'WEBER',
-    49015: 'EMERY',
-    49033: 'RICH',
-    49051: 'WASATCH',
-    49001: 'BEAVER',
-    49009: 'DAGGETT',
-    49011: 'DAVIS',
-    49055: 'WAYNE',
-    49031: 'PIUTE',
-    49029: 'MORGAN',
-    49035: 'SALT LAKE',
-    49013: 'DUCHESNE',
-    49023: 'JUAB',
-    49037: 'SAN JUAN'
+    '49025': 'KANE',
+    '49027': 'MILLARD',
+    '49039': 'SANPETE',
+    '49007': 'CARBON',
+    '49049': 'UTAH',
+    '49005': 'CACHE',
+    '49043': 'SUMMIT',
+    '49053': 'WASHINGTON',
+    '49019': 'GRAND',
+    '49047': 'UINTAH',
+    '49045': 'TOOELE',
+    '49041': 'SEVIER',
+    '49017': 'GARFIELD',
+    '49003': 'BOX ELDER',
+    '49021': 'IRON',
+    '49057': 'WEBER',
+    '49015': 'EMERY',
+    '49033': 'RICH',
+    '49051': 'WASATCH',
+    '49001': 'BEAVER',
+    '49009': 'DAGGETT',
+    '49011': 'DAVIS',
+    '49055': 'WAYNE',
+    '49031': 'PIUTE',
+    '49029': 'MORGAN',
+    '49035': 'SALT LAKE',
+    '49013': 'DUCHESNE',
+    '49023': 'JUAB',
+    '49037': 'SAN JUAN'
 }
 
 
@@ -116,7 +116,6 @@ def getRenameFieldMap(featurePath, currentName, newName):
 
 def translateValues(nadPoints):
     """Translate address point values to NAD domain values."""
-
     with arcpy.da.UpdateCursor(nadPoints,
                                ['StN_PreDir', 'StN_PosDir', 'StN_PosTyp', 'County']) as cursor:
         for row in cursor:
@@ -129,26 +128,30 @@ def translateValues(nadPoints):
 
 def populateNewFields(nadPoints):
     """Popluate added fields with values that fit NAD domains."""
-
-    arcpy.CalculateField_management(nadPoints,
-                                    'long',
-                                    '!SHAPE.CENTROID.X@DECIMALDEGREES!',
-                                    'PYTHON_9.3')
-
-    arcpy.CalculateField_management(nadPoints,
-                                    'lat',
-                                    '!SHAPE.CENTROID.Y@DECIMALDEGREES!',
-                                    'PYTHON_9.3')
-
-    arcpy.CalculateField_management(nadPoints,
-                                    'Source',
-                                    '"Utah AGRC"',
-                                    'PYTHON_9.3')
+    with arcpy.da.UpdateCursor(nadPoints,
+                               ['SHAPE@X', 'SHAPE@Y', 'longitude', 'latitude', 'Source'],
+                               spatial_reference=arcpy.SpatialReference(4326)) as cursor:
+        for row in cursor:
+            row[2] = row[0]
+            row[3] = row[1]
+            row[4] = 'Utah AGRC'
+            cursor.updateRow(row)
 
 
 def preProccessAddressPoints(sgidPoints):
     """Preprocess address points."""
-    pass
+    removed_count = 0
+    non_digit_oids = []
+    address_number_field = 'AddNum'
+    with arcpy.da.UpdateCursor(sgidPoints, ['OID@', address_number_field]) as cursor:
+        for oid, add_num in cursor:
+            if not add_num.isdigit():
+                cursor.deleteRow()
+                non_digit_oids.append(oid)
+                removed_count += 1
+
+    print 'OBJECTID in ({})'.format(','.join([str(x) for x in non_digit_oids]))
+    print removed_count
 
 
 def createFieldMapping(sgidPoints):
@@ -182,18 +185,36 @@ def createFieldMapping(sgidPoints):
 
 
 if __name__ == '__main__':
-    """Address Point must be in NAD coordinate system.
+    """Address Point ETL to NAD schema.
        It is also a good idea to first repair geometery."""
     print "Working"
-    baseNadSchema = r'.\data\NAD_template.gdb'
-    workingSchema = r'.data\outputs\NAD_AddressPoints' + uniqueRunNum + '.gdb'
+    # downloadable at: https://www.transportation.gov/gis/national-address-database/geodatabase-template
+    baseNadSchema = r'C:\GisWork\NAD_AddressPoints\NAD_template_20170801.gdb\NAD'
+    workingSchemaFolder = r'C:\GisWork\NAD_AddressPoints\outputs'
+    if not os.path.exists(workingSchemaFolder):
+        os.mkdir(workingSchemaFolder)
+    workingSchema = arcpy.CreateFileGDB_management(workingSchemaFolder, 'NAD_AddressPoints' + uniqueRunNum + '.gdb')[0]
     workingNad = os.path.join(workingSchema, 'NAD')
-    sgidAddressPoints = r'.\data\temp\sgid.gdb\AddressPoints_Project'
-    arcpy.Copy_management(baseNadSchema, workingSchema)
+    
+    sgidAddressPoints = r'Database Connections\Connection to sgid.agrc.utah.gov.sde\SGID10.LOCATION.AddressPoints'
+    address_points_local_gdb = "sgid_data.gdb"
+    if not arcpy.Exists(os.path.join(workingSchemaFolder, address_points_local_gdb)):
+        arcpy.Delete_management(address_points_local_gdb)
+    address_points_local_gdb = arcpy.CreateFileGDB_management(workingSchemaFolder, address_points_local_gdb)[0]
+    address_points_local = arcpy.Copy_management(sgidAddressPoints, os.path.join(address_points_local_gdb, 'Address_Points_Local'))[0]
+    arcpy.RepairGeometry_management(address_points_local, delete_null=True)
+    print 'Projecting address points'
+    projected_address_points = arcpy.Project_management(in_dataset=sgidAddressPoints,
+                                                        out_dataset=os.path.join(address_points_local_gdb, 'AddressPointsProject'),
+                                                        out_coor_system=3857,
+                                                        transform_method="WGS_1984_(ITRF00)_To_NAD_1983")[0]
+    # Non numeric address numbers don't work
+    preProccessAddressPoints(projected_address_points)
+    arcpy.Copy_management(baseNadSchema, workingNad)
 
-    fieldMap = createFieldMapping(sgidAddressPoints)
+    fieldMap = createFieldMapping(projected_address_points)
     print 'Append points to NAD feature class with field map'
-    arcpy.Append_management(sgidAddressPoints,
+    arcpy.Append_management(projected_address_points,
                             workingNad,
                             schema_type='NO_TEST',
                             field_mapping=fieldMap)
@@ -201,4 +222,5 @@ if __name__ == '__main__':
     populateNewFields(workingNad)
     print 'Translate values to NAD domain values'
     translateValues(workingNad)
+    # Output GDB is zipped and uploaded to https://drive.google.com/drive/folders/0Bw2vVDej5PsOQW1KV2NoaUh6NTA
     print 'Completed'
