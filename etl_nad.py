@@ -193,8 +193,8 @@ if __name__ == '__main__':
        It is also a good idea to first repair geometery."""
     print "Working"
     # downloadable at: https://www.transportation.gov/gis/national-address-database/geodatabase-template
-    baseNadSchema = r'C:\\Users\\gbunce\\Documents\\projects\\NAD_update\\NAD_Template_202310.gdb\\NAD'
-    workingSchemaFolder = r'C:\\Users\\gbunce\\Documents\\projects\\NAD_update\\outputs'
+    baseNadSchema = r'C:\\temp\\NAD_update\\NAD_Template_202310.gdb\\NAD'
+    workingSchemaFolder = r'C:\\temp\\NAD_update\\outputs'
     if not os.path.exists(workingSchemaFolder):
         os.mkdir(workingSchemaFolder)
     workingSchema = arcpy.CreateFileGDB_management(workingSchemaFolder, 'NAD_AddressPoints' + uniqueRunNum + '.gdb')[0]
