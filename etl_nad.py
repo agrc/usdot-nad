@@ -117,7 +117,7 @@ def getRenameFieldMap(featurePath, currentName, newName):
 def translateValues(nadPoints):
     """Translate address point values to NAD domain values."""
     with arcpy.da.UpdateCursor(nadPoints,
-                               ['StN_PreDir', 'StN_PosDir', 'StN_PosTyp', 'County']) as cursor:
+                               ['St_PreDir', 'St_PosDir', 'St_PosTyp', 'County']) as cursor:
         for row in cursor:
             row[0] = directionDomain.get(row[0], None)
             row[1] = directionDomain.get(row[1], None)
@@ -129,13 +129,16 @@ def translateValues(nadPoints):
 def populateNewFields(nadPoints):
     """Popluate added fields with values that fit NAD domains."""
     with arcpy.da.UpdateCursor(nadPoints,
-                               ['SHAPE@X', 'SHAPE@Y', 'longitude', 'latitude', 'Source'],
+                               ['SHAPE@X', 'SHAPE@Y', 'Longitude', 'Latitude', 'NAD_Source'],
                                spatial_reference=arcpy.SpatialReference(4326)) as cursor:
+        x = 0
         for row in cursor:
             row[2] = row[0]
             row[3] = row[1]
-            row[4] = 'Utah AGRC'
+            row[4] = 'Utah UGRC'
             cursor.updateRow(row)
+            x = x + 1
+            print x
 
 
 def preProccessAddressPoints(sgidPoints):
@@ -165,17 +168,18 @@ def createFieldMapping(sgidPoints):
         ('City', 'Inc_Muni'),
         ('CountyID', 'County'),
         ('ZipCode', 'Zip_Code'),
-        ('PrefixDir', 'StN_PreDir'),
-        ('StreetName', 'StreetName'),
-        ('StreetType', 'StN_PosTyp'),
-        ('SuffixDir', 'StN_PosDir'),
+        ('PrefixDir', 'St_PreDir'),
+        ('StreetName', 'St_Name'),
+        ('StreetType', 'St_PosTyp'),
+        ('SuffixDir', 'St_PosDir'),
         ('AddNum', 'Add_Number'),
-        ('LandmarkName', 'landmkName'),
+        ('FullAdd', 'StNam_Full'),
+        ('LandmarkName', 'LandmkName'),
         ('Building', 'Building'),
         ('UnitType', 'Unit'),
         ('AddSource', 'AddAuth'),
-        ('AddSystem', 'UniqWithin'),
-        ('LoadDate', 'LastUpdate')]
+        ('AddSystem', 'AddrRefSys'),
+        ('LoadDate', 'DateUpdate')]
 
     for p in mapPairs:
         print p
@@ -189,25 +193,28 @@ if __name__ == '__main__':
        It is also a good idea to first repair geometery."""
     print "Working"
     # downloadable at: https://www.transportation.gov/gis/national-address-database/geodatabase-template
-    baseNadSchema = r'C:\GisWork\NAD_AddressPoints\NAD_template_20170801.gdb\NAD'
-    workingSchemaFolder = r'C:\GisWork\NAD_AddressPoints\outputs'
+    baseNadSchema = r'C:\\Users\\gbunce\\Documents\\projects\\NAD_update\\NAD_Template_202310.gdb\\NAD'
+    workingSchemaFolder = r'C:\\Users\\gbunce\\Documents\\projects\\NAD_update\\outputs'
     if not os.path.exists(workingSchemaFolder):
         os.mkdir(workingSchemaFolder)
     workingSchema = arcpy.CreateFileGDB_management(workingSchemaFolder, 'NAD_AddressPoints' + uniqueRunNum + '.gdb')[0]
     workingNad = os.path.join(workingSchema, 'NAD')
     
-    sgidAddressPoints = r'Database Connections\Connection to sgid.agrc.utah.gov.sde\SGID10.LOCATION.AddressPoints'
-    address_points_local_gdb = "sgid_data.gdb"
-    if not arcpy.Exists(os.path.join(workingSchemaFolder, address_points_local_gdb)):
-        arcpy.Delete_management(address_points_local_gdb)
-    address_points_local_gdb = arcpy.CreateFileGDB_management(workingSchemaFolder, address_points_local_gdb)[0]
-    address_points_local = arcpy.Copy_management(sgidAddressPoints, os.path.join(address_points_local_gdb, 'Address_Points_Local'))[0]
-    arcpy.RepairGeometry_management(address_points_local, delete_null=True)
-    print 'Projecting address points'
-    projected_address_points = arcpy.Project_management(in_dataset=sgidAddressPoints,
-                                                        out_dataset=os.path.join(address_points_local_gdb, 'AddressPointsProject'),
-                                                        out_coor_system=3857,
-                                                        transform_method="WGS_1984_(ITRF00)_To_NAD_1983")[0]
+    # sgidAddressPoints = r'Database Connections\\internal@SGID@internal.agrc.utah.gov.sde\\SGID.LOCATION.AddressPoints'
+    # address_points_local_gdb = "sgid_data.gdb"
+    # if arcpy.Exists(os.path.join(workingSchemaFolder, address_points_local_gdb)):
+    #     arcpy.Delete_management(os.path.join(workingSchemaFolder, address_points_local_gdb))
+    # address_points_local_gdb = arcpy.CreateFileGDB_management(workingSchemaFolder, address_points_local_gdb)[0]
+    # address_points_local = arcpy.Copy_management(sgidAddressPoints, os.path.join(address_points_local_gdb, 'Address_Points_Local'))[0]
+    # arcpy.RepairGeometry_management(address_points_local, delete_null=True)
+    # print 'Projecting address points'
+    # projected_address_points = arcpy.Project_management(in_dataset=sgidAddressPoints,
+    #                                                     out_dataset=os.path.join(address_points_local_gdb, 'AddressPointsProject'),
+    #                                                     out_coor_system=3857,
+    #                                                     transform_method="WGS_1984_(ITRF00)_To_NAD_1983")[0]
+
+    projected_address_points = "C:\Users\gbunce\Documents\projects\NAD_update\outputs\sgid_data.gdb\AddressPointsProject"
+
     # Non numeric address numbers don't work
     preProccessAddressPoints(projected_address_points)
     arcpy.Copy_management(baseNadSchema, workingNad)
