@@ -200,20 +200,18 @@ if __name__ == '__main__':
     workingSchema = arcpy.CreateFileGDB_management(workingSchemaFolder, 'NAD_AddressPoints' + uniqueRunNum + '.gdb')[0]
     workingNad = os.path.join(workingSchema, 'NAD')
     
-    # sgidAddressPoints = r'Database Connections\\internal@SGID@internal.agrc.utah.gov.sde\\SGID.LOCATION.AddressPoints'
-    # address_points_local_gdb = "sgid_data.gdb"
-    # if arcpy.Exists(os.path.join(workingSchemaFolder, address_points_local_gdb)):
-    #     arcpy.Delete_management(os.path.join(workingSchemaFolder, address_points_local_gdb))
-    # address_points_local_gdb = arcpy.CreateFileGDB_management(workingSchemaFolder, address_points_local_gdb)[0]
-    # address_points_local = arcpy.Copy_management(sgidAddressPoints, os.path.join(address_points_local_gdb, 'Address_Points_Local'))[0]
-    # arcpy.RepairGeometry_management(address_points_local, delete_null=True)
-    # print 'Projecting address points'
-    # projected_address_points = arcpy.Project_management(in_dataset=sgidAddressPoints,
-    #                                                     out_dataset=os.path.join(address_points_local_gdb, 'AddressPointsProject'),
-    #                                                     out_coor_system=3857,
-    #                                                     transform_method="WGS_1984_(ITRF00)_To_NAD_1983")[0]
-
-    projected_address_points = "C:\Users\gbunce\Documents\projects\NAD_update\outputs\sgid_data.gdb\AddressPointsProject"
+    sgidAddressPoints = r'Database Connections\\internal@SGID@internal.agrc.utah.gov.sde\\SGID.LOCATION.AddressPoints'
+    address_points_local_gdb = "sgid_data.gdb"
+    if arcpy.Exists(os.path.join(workingSchemaFolder, address_points_local_gdb)):
+        arcpy.Delete_management(os.path.join(workingSchemaFolder, address_points_local_gdb))
+    address_points_local_gdb = arcpy.CreateFileGDB_management(workingSchemaFolder, address_points_local_gdb)[0]
+    address_points_local = arcpy.Copy_management(sgidAddressPoints, os.path.join(address_points_local_gdb, 'Address_Points_Local'))[0]
+    arcpy.RepairGeometry_management(address_points_local, delete_null=True)
+    print 'Projecting address points'
+    projected_address_points = arcpy.Project_management(in_dataset=sgidAddressPoints,
+                                                        out_dataset=os.path.join(address_points_local_gdb, 'AddressPointsProject'),
+                                                        out_coor_system=3857,
+                                                        transform_method="WGS_1984_(ITRF00)_To_NAD_1983")[0]
 
     # Non numeric address numbers don't work
     preProccessAddressPoints(projected_address_points)
