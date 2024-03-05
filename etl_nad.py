@@ -193,8 +193,8 @@ if __name__ == '__main__':
        It is also a good idea to first repair geometery."""
     print "Working"
     # downloadable at: https://www.transportation.gov/gis/national-address-database/geodatabase-template
-    baseNadSchema = r'C:\\temp\\NAD_update\\NAD_Template_202310.gdb\\NAD'
-    workingSchemaFolder = r'C:\\temp\\NAD_update\\outputs'
+    baseNadSchema = r'C:\\Users\\gbunce\\Documents\\projects\\NAD_update\\NAD_Template_202310.gdb\\NAD'
+    workingSchemaFolder = r'C:\\Users\\gbunce\\Documents\\projects\\NAD_update\\outputs'
     if not os.path.exists(workingSchemaFolder):
         os.mkdir(workingSchemaFolder)
     workingSchema = arcpy.CreateFileGDB_management(workingSchemaFolder, 'NAD_AddressPoints' + uniqueRunNum + '.gdb')[0]
@@ -212,6 +212,9 @@ if __name__ == '__main__':
                                                         out_dataset=os.path.join(address_points_local_gdb, 'AddressPointsProject'),
                                                         out_coor_system=3857,
                                                         transform_method="WGS_1984_(ITRF00)_To_NAD_1983")[0]
+
+#: use this line if you alreay have the sgid address points downloaded (and comment out lines 203-214)
+# projected_address_points = "C:\Users\gbunce\Documents\projects\NAD_update\outputs\sgid_data.gdb\AddressPointsProject"
 
     # Non numeric address numbers don't work
     preProccessAddressPoints(projected_address_points)
