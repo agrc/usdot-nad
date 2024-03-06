@@ -129,13 +129,32 @@ def translateValues(nadPoints):
 def populateNewFields(nadPoints):
     """Popluate added fields with values that fit NAD domains."""
     with arcpy.da.UpdateCursor(nadPoints,
-                               ['SHAPE@X', 'SHAPE@Y', 'Longitude', 'Latitude', 'NAD_Source'],
+                               ['SHAPE@X', 'SHAPE@Y', 'Longitude', 'Latitude', 'NAD_Source', 'St_Name', 'St_PreTyp'],
                                spatial_reference=arcpy.SpatialReference(4326)) as cursor:
         x = 0
         for row in cursor:
             row[2] = row[0]
             row[3] = row[1]
-            row[4] = 'Utah UGRC'
+            row[4] = 'Utah Geospatial Resource Center (UGRC)'
+            
+            #: parse out street pre types for street names with one pre type
+            if row[5].startswith('HIGHWAY ') or row[5].startswith('HWY ') or row[5].startswith('US ') or row[5].startswith('SR '):
+                street_name_split = row[5].split(" ", 1)
+                row[6] = street_name_split[0]
+                row[5] = street_name_split[1]
+
+            #: parse out street pre types for street names with two pre type
+            if row[5].startswith('OLD HIGHWAY ') or row[5].startswith('OLD HWY '):
+                street_name_split = row[5].split(" ", 2)
+                row[6] = street_name_split[0] + " " + street_name_split[1]
+                row[5] = street_name_split[2]
+
+            #: parse out street pre types for street names with three pre type   
+            if row[5].startswith('OLD US HWY '):             
+                street_name_split = row[5].split(" ", 3)
+                row[6] = street_name_split[0] + " " +  street_name_split[1] + " " + street_name_split[2]
+                row[5] = street_name_split[3]
+
             cursor.updateRow(row)
             x = x + 1
             print x
@@ -162,7 +181,7 @@ def createFieldMapping(sgidPoints):
     # Create field mappings
     sgidFMs = arcpy.FieldMappings()
 
-    # Perform some field renaming
+    # Perform some field renaming ('ugrc_field', 'nad_field')
     mapPairs = [
         ('State', 'State'),
         ('City', 'Inc_Muni'),
@@ -179,7 +198,9 @@ def createFieldMapping(sgidPoints):
         ('UnitType', 'Unit'),
         ('AddSource', 'AddAuth'),
         ('AddSystem', 'AddrRefSys'),
-        ('LoadDate', 'DateUpdate')]
+        ('LoadDate', 'DateUpdate'),
+        ['UTAddPtID','DataSet_ID'],
+        ('PtLocation','Placement')]
 
     for p in mapPairs:
         print p
@@ -212,6 +233,9 @@ if __name__ == '__main__':
                                                         out_dataset=os.path.join(address_points_local_gdb, 'AddressPointsProject'),
                                                         out_coor_system=3857,
                                                         transform_method="WGS_1984_(ITRF00)_To_NAD_1983")[0]
+
+    #: use this line if you already have the sgid address points downloaded locally (and comment out the code block above)
+    # projected_address_points = "C:\Users\gbunce\Documents\projects\NAD_update\outputs\sgid_data.gdb\AddressPointsProject"
 
     # Non numeric address numbers don't work
     preProccessAddressPoints(projected_address_points)
