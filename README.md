@@ -13,5 +13,5 @@ Script to ETL the SGID AddressPoints to National Address Dataset (NAD) schema an
 
 ### Running the script
 - Download the latest NAD file geodatabase template from [USDOT](https://www.transportation.gov/mission/open/gis/national-address-database/national-address-database-nad-disclaimer) site.
-- Point the script (etl_nad.py) to the downloaded NAD gdb template, the SGID address points and an output directory.
+- Point the script (etl_nad.py) to the downloaded NAD gdb template, the SGID address points, and an output directory.
 - Reach out to Jason Ford or NAD@dot.gov and request a secure FTP link where you can upload the data.
