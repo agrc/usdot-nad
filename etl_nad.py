@@ -286,6 +286,26 @@ def calc_Post_City(nadPoints):
                 #print(f"No match found for Zip_Code: {zip_code}")
 
     print("Post_City field updated successfully.")
+def calc_street(nadPoints):
+    update_count = 0
+    # Calculate "STREET" field where applicable
+    fields = ['St_PreDir', 'St_PreTyp', 'St_Name', 'St_PosDir', 'St_PosTyp', 'StNam_Full']
+    with arcpy.da.UpdateCursor(nadPoints, fields) as cursor:
+        print("Looping through rows in FC ...")
+        for row in cursor:
+            # Handle None values
+            parts = [row[i] if row[i] is not None else '' for i in range(5)]
+            
+            # Construct the full street name
+            new_value = re.sub(r'\s+', ' ', " ".join(parts).strip())
+            
+            # Update only if there is a change
+            if row[5] != new_value:
+                row[5] = new_value
+                cursor.updateRow(row)
+                update_count += 1
+    
+    print("Total count of updates to {0}: {1}".format(fields[5], update_count))
 if __name__ == '__main__':
     """Address Point ETL to NAD schema.
        It is also a good idea to first repair geometery."""
@@ -333,3 +353,4 @@ if __name__ == '__main__':
     translateValues(workingNad)
     # Output GDB is zipped and uploaded to https://drive.google.com/drive/folders/0Bw2vVDej5PsOQW1KV2NoaUh6NTA
     print 'Completed'
+    calc_street(workingNad)
