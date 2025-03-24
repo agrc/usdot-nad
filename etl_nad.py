@@ -207,6 +207,28 @@ def createFieldMapping(sgidPoints):
         sgidFMs.addFieldMap(getRenameFieldMap(sgidPoints, p[0], p[1]))
 
     return sgidFMs
+def calculateNatAmArea(nadPoints):
+    """Spatially joins tribal lands to NAD points and updates the 'NatAmArea' field."""
+    land_ownership_url = "https://gis.trustlands.utah.gov/mapping/rest/services/Land_Ownership/FeatureServer/0"
+    local_tribal_lands = "in_memory/local_tribal_lands"
+
+    if not arcpy.Exists(local_tribal_lands):
+        arcpy.CopyFeatures_management(land_ownership_url, local_tribal_lands)
+
+    polygon_layer = arcpy.MakeFeatureLayer_management(local_tribal_lands, "tribal_lands", "state_lgd = 'Tribal Lands'")
+    output_joined = "in_memory/joined_NatAmArea"
+
+    arcpy.SpatialJoin_analysis(nadPoints, polygon_layer, output_joined, "JOIN_ONE_TO_ONE", "KEEP_ALL", match_option="INTERSECT")
+
+    tribe_dict = {row[1]: row[0] for row in arcpy.da.SearchCursor(output_joined, ["tribe", "TARGET_FID"])}
+
+    with arcpy.da.UpdateCursor(nadPoints, ["NatAmArea", "OBJECTID"]) as update_cursor:
+        for row in update_cursor:
+            if row[1] in tribe_dict:
+                row[0] = tribe_dict[row[1]]
+                update_cursor.updateRow(row)
+
+    arcpy.Delete_management(output_joined)
 
 
 if __name__ == '__main__':
@@ -250,6 +272,7 @@ if __name__ == '__main__':
     print 'Populate new fields'
     populateNewFields(workingNad)
     print 'Translate values to NAD domain values'
+    calculateNatAmArea(workingNad)
     translateValues(workingNad)
     # Output GDB is zipped and uploaded to https://drive.google.com/drive/folders/0Bw2vVDej5PsOQW1KV2NoaUh6NTA
     print 'Completed'
