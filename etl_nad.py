@@ -230,6 +230,28 @@ def calculateNatAmArea(nadPoints):
 
     arcpy.Delete_management(output_joined)
 
+def calculateCensus_Plc(nadPoints):
+    """Spatially joins Census Place to NAD points and updates the 'Census Place Name' field."""
+    utah_census_places_2020_url = "https://services1.arcgis.com/99lidPhWCzftIe9K/ArcGIS/rest/services/CensusPlaces2020/FeatureServer/0"
+    local_census_places = "in_memory/local_census_places"
+
+    if not arcpy.Exists(local_census_places):
+        arcpy.CopyFeatures_management(utah_census_places_2020_url, local_census_places)
+
+    polygon_layer = arcpy.MakeFeatureLayer_management(local_census_places, "CDP", "LSAD20 = '57'")
+    output_joined = "in_memory/joined_Census_Plc_NAMELSAD20"
+
+    arcpy.SpatialJoin_analysis(nadPoints, polygon_layer, output_joined, "JOIN_ONE_TO_ONE", "KEEP_ALL", match_option="INTERSECT")
+
+    CDP_dict = {row[1]: row[0] for row in arcpy.da.SearchCursor(output_joined, ["NAMELSAD20", "TARGET_FID"])}
+
+    with arcpy.da.UpdateCursor(nadPoints, ["Census_Plc", "OBJECTID"]) as update_cursor:
+        for row in update_cursor:
+            if row[1] in CDP_dict:
+                row[0] = CDP_dict[row[1]]
+                update_cursor.updateRow(row)
+
+    arcpy.Delete_management(output_joined)
 
 if __name__ == '__main__':
     """Address Point ETL to NAD schema.
@@ -273,6 +295,7 @@ if __name__ == '__main__':
     populateNewFields(workingNad)
     print 'Translate values to NAD domain values'
     calculateNatAmArea(workingNad)
+    calculateCensus_Plc(workingNad)
     translateValues(workingNad)
     # Output GDB is zipped and uploaded to https://drive.google.com/drive/folders/0Bw2vVDej5PsOQW1KV2NoaUh6NTA
     print 'Completed'
