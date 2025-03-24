@@ -1,6 +1,9 @@
 #Project specific
 data/**
 *.lock
+outputs/**
+Working Project usdot-nad
+*.fieldmap
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
