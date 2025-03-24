@@ -115,18 +115,6 @@ countyFipsDomain = {
 tribeDomain = {
     #https://www2.census.gov/geo/docs/reference/codes/AIAlist.txt
 
-def getRenameFieldMap(featurePath, currentName, newName):
-    """Create a field map that does a basic field rename."""
-    tempMap = arcpy.FieldMap()
-    tempMap.addInputField(featurePath, currentName)
-
-    tempName = tempMap.outputField
-    tempName.name = newName
-    tempName.aliasName = newName
-    tempMap.outputField = tempName
-
-    return tempMap
-
     'Goshute': 'Goshute Reservation',
     'Shoshone': 'Northwestern Shoshone Reservation',
     'Ute Mountain Ute': 'Ute Mountain Reservation',
