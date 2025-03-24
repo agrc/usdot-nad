@@ -137,40 +137,36 @@ def translateValues(nadPoints):
             ]
             cursor.updateRow(row)
 
-
-def populateNewFields(nadPoints):
-    """Popluate added fields with values that fit NAD domains."""
-    with arcpy.da.UpdateCursor(nadPoints,
-                               ['SHAPE@X', 'SHAPE@Y', 'Longitude', 'Latitude', 'NAD_Source', 'St_Name', 'St_PreTyp'],
-                               spatial_reference=arcpy.SpatialReference(4326)) as cursor:
-        x = 0
+def populateNewFields(nadPoints): 
+    """Populate added fields with values that fit NAD domains."""
+    fields = [
+        'SHAPE@X', 'SHAPE@Y', 'Longitude', 'Latitude', 'NAD_Source', 
+        'St_Name', 'St_PreTyp', 'AddNo_Full', 'Add_Number', 'AddNum_Suf', 'AddrPoint'
+    ]
+    highway_prefixes = ['HIGHWAY ', 'HWY ', 'US ', 'SR ']
+    old_highway_prefixes = ['OLD HIGHWAY ', 'OLD HWY ']
+    
+    with arcpy.da.UpdateCursor(nadPoints, fields, spatial_reference=arcpy.SpatialReference(4326)) as cursor:
         for row in cursor:
-            row[2] = row[0]
-            row[3] = row[1]
+            # Assign coordinate-based fields
+            row[2], row[3] = row[0], row[1]
             row[4] = 'Utah Geospatial Resource Center (UGRC)'
+            row[10] = f"{round(row[0], 6)} {round(row[1], 6)}"
+
+            # Process street name prefixes safely
+            street_name = row[5] if row[5] else ""  # Ensure it's a string
+
+            for prefix in highway_prefixes:
+                if street_name.startswith(prefix):
+                    row[6], row[5] = prefix.strip(), street_name[len(prefix):]
+                    break
+            for prefix in old_highway_prefixes:
+                if street_name.startswith(prefix):
+                    row[6], row[5] = prefix.strip(), street_name[len(prefix):]
+                    break
             
-            #: parse out street pre types for street names with one pre type
-            if row[5].startswith('HIGHWAY ') or row[5].startswith('HWY ') or row[5].startswith('US ') or row[5].startswith('SR '):
-                street_name_split = row[5].split(" ", 1)
-                row[6] = street_name_split[0]
-                row[5] = street_name_split[1]
-
-            #: parse out street pre types for street names with two pre type
-            if row[5].startswith('OLD HIGHWAY ') or row[5].startswith('OLD HWY '):
-                street_name_split = row[5].split(" ", 2)
-                row[6] = street_name_split[0] + " " + street_name_split[1]
-                row[5] = street_name_split[2]
-
-            #: parse out street pre types for street names with three pre type   
-            if row[5].startswith('OLD US HWY '):             
-                street_name_split = row[5].split(" ", 3)
-                row[6] = street_name_split[0] + " " +  street_name_split[1] + " " + street_name_split[2]
-                row[5] = street_name_split[3]
-
+            row[7] = f"{row[8]} {row[9]}" if row[9] else row[8]
             cursor.updateRow(row)
-            x = x + 1
-            print x
-
 
 def preProccessAddressPoints(sgidPoints):
     """Preprocess address points."""
