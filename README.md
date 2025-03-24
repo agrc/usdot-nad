@@ -1,6 +1,6 @@
 usdot-nad
 =========
-Supports ArcGIS Desktop versions: 10.x
+Supports ArcGIS Pro versions: 3.x
 
 Script to ETL the SGID AddressPoints to National Address Dataset (NAD) schema and domains.
 
