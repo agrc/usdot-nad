@@ -181,21 +181,18 @@ def populateNewFields(nadPoints):
             cursor.updateRow(row)
 
 def preProccessAddressPoints(sgidPoints):
-    """Preprocess address points."""
-    removed_count = 0
-    non_digit_oids = []
+    """Preprocess address points by removing records with non-numeric address numbers."""
     address_number_field = 'AddNum'
-    with arcpy.da.UpdateCursor(sgidPoints, ['OID@', address_number_field]) as cursor:
-        for oid, add_num in cursor:
-            if not add_num.isdigit():
+    non_digit_oids = [
+        row[0] for row in arcpy.da.SearchCursor(sgidPoints, ['OID@', address_number_field])
+        if not row[1].isdigit()
+    ]
+
+    if non_digit_oids:
+        where_clause = f"OBJECTID IN ({', '.join(map(str, non_digit_oids))})"
+        with arcpy.da.UpdateCursor(sgidPoints, ['OID@'], where_clause) as cursor:
+            for _ in cursor:
                 cursor.deleteRow()
-                non_digit_oids.append(oid)
-                removed_count += 1
-
-    print 'OBJECTID in ({})'.format(','.join([str(x) for x in non_digit_oids]))
-    print removed_count
-
-
         
         print(f"Removed {len(non_digit_oids)} points: {where_clause}")
 
