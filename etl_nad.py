@@ -100,6 +100,8 @@ countyFipsDomain = {
     '49037': 'SAN JUAN'
 }
 
+tribeDomain = {
+    #https://www2.census.gov/geo/docs/reference/codes/AIAlist.txt
 
 def getRenameFieldMap(featurePath, currentName, newName):
     """Create a field map that does a basic field rename."""
@@ -113,6 +115,13 @@ def getRenameFieldMap(featurePath, currentName, newName):
 
     return tempMap
 
+    'Goshute': 'Goshute Reservation',
+    'Shoshone': 'Northwestern Shoshone Reservation',
+    'Ute Mountain Ute': 'Ute Mountain Reservation',
+    'Navajo': 'Navajo Nation Reservation',
+    'Paiute': 'Paiute (UT) Reservation',
+    'Ute': 'Uintah and Ouray Reservation'
+}
 
 def translateValues(nadPoints):
     """Translate address point values to NAD domain values."""
