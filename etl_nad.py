@@ -2,6 +2,8 @@
 import arcpy
 import os
 from time import strftime
+from time import strftime, time
+start_time = time()
 
 uniqueRunNum = strftime("%Y%m%d_%H%M%S")
 
@@ -366,3 +368,17 @@ if __name__ == '__main__':
     blanks_to_nulls(workingNad)
     calc_street(workingNad)
     print ('Completed')
+
+    # End the timer
+    end_time = time()
+
+    # Calculate elapsed time
+    elapsed_seconds = end_time - start_time
+
+    # Convert to hours, minutes, and seconds
+    hours = int(elapsed_seconds // 3600)
+    minutes = int((elapsed_seconds % 3600) // 60)
+    seconds = int(elapsed_seconds % 60)
+
+    # Print the result in a readable format
+    print(f"Process completed in {hours}h {minutes}m {seconds}s.")
