@@ -253,6 +253,39 @@ def calculateCensus_Plc(nadPoints):
 
     arcpy.Delete_management(output_joined)
 
+def calc_Post_City(nadPoints):
+    #Use the ZipCodes SGID layer to find the matching 5 digit zip code and fill the Post_City with the city Name
+
+    rest_service_url = "https://services1.arcgis.com/99lidPhWCzftIe9K/ArcGIS/rest/services/UtahZipCodeAreas/FeatureServer/0"
+
+    # Fields to work with
+    zip_code_field = "Zip_Code"
+    post_city_field = "Post_City"
+    rest_zip5_field = "ZIP5"
+    rest_name_field = "NAME"
+
+    
+    # Create an update cursor for the point layer
+    with arcpy.da.UpdateCursor(nadPoints, [zip_code_field, post_city_field]) as update_cursor:
+        for row in update_cursor:
+            zip_code = row[0]
+            post_city = None  # Initialize post_city to None
+
+            # Create a search cursor for the REST service
+            query = f"{rest_zip5_field} = '{zip_code}'"
+            with arcpy.da.SearchCursor(rest_service_url, [rest_name_field], query) as search_cursor:
+                for search_row in search_cursor:
+                    post_city = search_row[0]
+                    break  # Assuming only one match per zip code
+
+            # Update the Post_City field if a match was found
+            if post_city:
+                row[1] = post_city
+                update_cursor.updateRow(row)
+            #else:
+                #print(f"No match found for Zip_Code: {zip_code}")
+
+    print("Post_City field updated successfully.")
 if __name__ == '__main__':
     """Address Point ETL to NAD schema.
        It is also a good idea to first repair geometery."""
@@ -296,6 +329,7 @@ if __name__ == '__main__':
     print 'Translate values to NAD domain values'
     calculateNatAmArea(workingNad)
     calculateCensus_Plc(workingNad)
+    calc_Post_City(workingNad)
     translateValues(workingNad)
     # Output GDB is zipped and uploaded to https://drive.google.com/drive/folders/0Bw2vVDej5PsOQW1KV2NoaUh6NTA
     print 'Completed'
