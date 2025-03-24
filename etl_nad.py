@@ -306,6 +306,34 @@ def calc_street(nadPoints):
                 update_count += 1
     
     print("Total count of updates to {0}: {1}".format(fields[5], update_count))
+def blanks_to_nulls(nadPoints):
+
+    update_count = 0
+    flist = ['ADDNUM_SUF', 'BUILDING', 'UNIT', 'LandmkName', 'Inc_Muni', 'Parcel_ID', 'Addr_Type', 'St_PosTyp', 'St_PosDir', 'St_PreDir', 'Placement']
+    fields = arcpy.ListFields(nadPoints)
+
+    field_list = []
+    for field in fields:
+        if field.name in flist:
+            print("{} appended to field_list".format(field.name))
+            field_list.append(field)
+
+    with arcpy.da.UpdateCursor(nadPoints, flist) as cursor:
+        print("Looping through rows in FC ...")
+        for row in cursor:
+            for i in range(len(field_list)):
+                if row[i] == '' or row[i] == ' ':
+                    #print(f"Found blank in {field_list[i].name}, ObjectID: {row[0]}")
+                    update_count += 1
+                    row[i] = None
+                    #print(f"Set {field_list[i].name} to {row[i]}, ObjectID: {row[0]}") # Debugging line
+            try:
+                cursor.updateRow(row)
+                #print(f"Row updated successfully, ObjectID: {row[0]}") #Debugging line
+            except Exception as e:
+                print(f"Error updating row: {e}, ObjectID: {row[0]}")
+
+    print("Total count of blanks converted to NULLs is: {}".format(update_count))
 if __name__ == '__main__':
     """Address Point ETL to NAD schema.
        It is also a good idea to first repair geometery."""
@@ -353,4 +381,5 @@ if __name__ == '__main__':
     translateValues(workingNad)
     # Output GDB is zipped and uploaded to https://drive.google.com/drive/folders/0Bw2vVDej5PsOQW1KV2NoaUh6NTA
     print 'Completed'
+    blanks_to_nulls(workingNad)
     calc_street(workingNad)
