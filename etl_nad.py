@@ -1,8 +1,18 @@
-"""ETL for SGID address points to national address dataset (NAD)."""
+"""
+ETL for SGID address points to national address dataset (NAD).
+
+#only 3 of UGRC SGID Address Point fields are not used to match: OBJECTID, PtLocation, Structure
+#2 NAD Always Used fields are not populated: Urbnztn_PR, UUID
+
+Estimate Time: 
+- projected address data has been downloaded locally (option 2): 3 h 20 m
+"""
 import arcpy
 import os
-from time import strftime
 from time import strftime, time
+import re
+
+# Start the timer
 start_time = time()
 
 uniqueRunNum = strftime("%Y%m%d_%H%M%S")
@@ -325,14 +335,15 @@ if __name__ == '__main__':
 
     print ("Working")
     # downloadable at: https://www.transportation.gov/gis/national-address-database/geodatabase-template
-    baseNadSchema = r'C:\\temp\\NAD_update\\NAD_Template_202310.gdb\\NAD'
-    workingSchemaFolder = r'C:\\temp\\NAD_update\\outputs'
+    baseNadSchema = r'C:\Users\hchou\Project\usdot-nad\NAD_Template_202310.gdb\Addr_Point'
+    workingSchemaFolder = r'C:\Users\hchou\Project\usdot-nad\outputs'
     if not os.path.exists(workingSchemaFolder):
         os.mkdir(workingSchemaFolder)
     workingSchema = arcpy.CreateFileGDB_management(workingSchemaFolder, 'NAD_AddressPoints' + uniqueRunNum + '.gdb')[0]
     workingNad = os.path.join(workingSchema, 'NAD')
-    
-    sgidAddressPoints = r'Database Connections\\internal@SGID@internal.agrc.utah.gov.sde\\SGID.LOCATION.AddressPoints'
+
+    #Option 1
+    sgidAddressPoints = r"C:\\Users\\hchou\\AppData\\Roaming\\ESRI\\ArcGISPro\\Favorites\\internal@SGID@internal.agrc.utah.gov.sde\\SGID.LOCATION.AddressPoints"
     address_points_local_gdb = "sgid_data.gdb"
     if arcpy.Exists(os.path.join(workingSchemaFolder, address_points_local_gdb)):
         arcpy.Delete_management(os.path.join(workingSchemaFolder, address_points_local_gdb))
@@ -344,27 +355,32 @@ if __name__ == '__main__':
                                                         out_dataset=os.path.join(address_points_local_gdb, 'AddressPointsProject'),
                                                         out_coor_system=3857,
                                                         transform_method="WGS_1984_(ITRF00)_To_NAD_1983")[0]
+    
+    #: use option 2 if you already have the sgid address points downloaded locally (and comment out the code block above)
 
-    #: use this line if you already have the sgid address points downloaded locally (and comment out the code block above)
-    # projected_address_points = "C:\Users\gbunce\Documents\projects\NAD_update\outputs\sgid_data.gdb\AddressPointsProject"
+    #Option 2
+    #projected_address_points = r'C:\Users\hchou\Project\usdot-nad\outputs\sgid_data.gdb\AddressPointsProject'
 
-    # Non numeric address numbers don't work
     preProccessAddressPoints(projected_address_points)
     arcpy.Copy_management(baseNadSchema, workingNad)
-
     print ('Append points to NAD feature class with field map')
     arcpy.Append_management(projected_address_points,
                             workingNad,
                             schema_type='NO_TEST',
                             #field_mapping=fieldMap
                             field_mapping=r'AddNum_Pre "AddNum_Pre" true true false 15 String 0 0,First,#;Add_Number "Add_Number" true true false 4 Long 0 0,First,#,AddressPointsProject,AddNum,0,9;AddNum_Suf "AddNum_Suf" true true false 15 String 0 0,First,#,AddressPointsProject,AddNumSuffix,0,3;AddNo_Full "AddNo_Full" true true false 100 String 0 0,First,#;St_PreMod "St_PreMod" true true false 15 String 0 0,First,#;St_PreDir "St_PreDir" true true false 10 String 0 0,First,#,AddressPointsProject,PrefixDir,0,9;St_PreTyp "St_PreTyp" true true false 50 String 0 0,First,#;St_PreSep "St_PreSep" true true false 20 String 0 0,First,#;St_Name "St_Name" true true false 254 String 0 0,First,#,AddressPointsProject,StreetName,0,49;St_PosTyp "St_PosTyp" true true false 50 String 0 0,First,#,AddressPointsProject,StreetType,0,3;St_PosDir "St_PosDir" true true false 10 String 0 0,First,#,AddressPointsProject,SuffixDir,0,9;St_PosMod "St_PosMod" true true false 25 String 0 0,First,#;Building "Building" true true false 75 String 0 0,First,#,C:\Users\hchou\Project\usdot-nad\outputs\sgid_data.gdb\AddressPointsProject,Building,0,74;Floor "Floor" true true false 75 String 0 0,First,#;Unit "Unit" true true false 75 String 0 0,First,#,AddressPointsProject,UnitType,0,19;Room "Room" true true false 75 String 0 0,First,#;Seat "Seat" true true false 75 String 0 0,First,#;Addtl_Loc "Addtl_Loc" true true false 225 String 0 0,First,#;SubAddress "SubAddress" true true false 255 String 0 0,First,#;LandmkName "LandmkName" true true false 150 String 0 0,First,#,AddressPointsProject,LandmarkName,0,74;County "County" true true false 100 String 0 0,First,#,AddressPointsProject,CountyID,0,14;Inc_Muni "Inc_Muni" true true false 100 String 0 0,First,#,AddressPointsProject,City,0,29;Post_City "Post_City" true true false 40 String 0 0,First,#;Census_Plc "Census_Plc" true true false 100 String 0 0,First,#;Uninc_Comm "Uninc_Comm" true true false 100 String 0 0,First,#;Nbrhd_Comm "Nbrhd_Comm" true true false 100 String 0 0,First,#;NatAmArea "NatAmArea" true true false 100 String 0 0,First,#;NatAmSub "NatAmSub" true true false 100 String 0 0,First,#;Urbnztn_PR "Urbnztn_PR" true true false 100 String 0 0,First,#;PlaceOther "PlaceOther" true true false 100 String 0 0,First,#;PlaceNmTyp "PlaceNmTyp" true true false 50 String 0 0,First,#;State "State" true true false 2 String 0 0,First,#,AddressPointsProject,State,0,1;Zip_Code "Zip_Code" true true false 7 String 0 0,First,#,AddressPointsProject,ZipCode,0,4;Plus_4 "Plus_4" true true false 4 String 0 0,First,#;UUID "UUID" true true false 38 Guid 0 0,First,#;AddAuth "AddAuth" true true false 100 String 0 0,First,#,AddressPointsProject,AddSource,0,29;AddrRefSys "AddrRefSys" true true false 75 String 0 0,First,#,AddressPointsProject,AddSystem,0,39;Longitude "Longitude" true true false 8 Double 0 0,First,#;Latitude "Latitude" true true false 8 Double 0 0,First,#;NatGrid "NatGrid" true true false 50 String 0 0,First,#,AddressPointsProject,USNG,0,9;Elevation "Elevation" true true false 2 Short 0 0,First,#;Placement "Placement" true true false 25 String 0 0,First,#,AddressPointsProject,PtLocation,0,24;AddrPoint "AddrPoint" true true false 50 String 0 0,First,#;Related_ID "Related_ID" true true false 50 String 0 0,First,#;RelateType "RelateType" true true false 50 String 0 0,First,#;ParcelSrc "ParcelSrc" true true false 50 String 0 0,First,#;Parcel_ID "Parcel_ID" true true false 50 String 0 0,First,#,AddressPointsProject,ParcelID,0,29;AddrClass "AddrClass" true true false 50 String 0 0,First,#;Lifecycle "Lifecycle" true true false 50 String 0 0,First,#;Effective "Effective" true true false 8 Date 0 0,First,#;Expire "Expire" true true false 8 Date 0 0,First,#;DateUpdate "DateUpdate" true true false 8 Date 0 0,First,#,AddressPointsProject,LoadDate,-1,-1;AnomStatus "AnomStatus" true true false 50 String 0 0,First,#;LocatnDesc "LocatnDesc" true true false 75 String 0 0,First,#;Addr_Type "Addr_Type" true true false 50 String 0 0,First,#,AddressPointsProject,PtType,0,14;DeliverTyp "DeliverTyp" true true false 50 String 0 0,First,#;NAD_Source "NAD_Source" true true false 75 String 0 0,First,#;DataSet_ID "DataSet_ID" true true false 254 String 0 0,First,#,AddressPointsProject,UTAddPtID,0,139'
+                            )
+    print ('Populate new fields')
     populateNewFields(workingNad)
     print ('Translate values to NAD domain values')
+
+    arcpy.RepairGeometry_management(workingNad)
+    print(f"Geometry repaired for: {workingNad}")
+
     calculateNatAmArea(workingNad)
     calculateCensus_Plc(workingNad)
     calc_Post_City(workingNad)
     translateValues(workingNad)
-    # Output GDB is zipped and uploaded to https://drive.google.com/drive/folders/0Bw2vVDej5PsOQW1KV2NoaUh6NTA
     blanks_to_nulls(workingNad)
     calc_street(workingNad)
     print ('Completed')
