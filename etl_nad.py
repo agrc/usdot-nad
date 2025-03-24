@@ -124,14 +124,17 @@ def getRenameFieldMap(featurePath, currentName, newName):
 }
 
 def translateValues(nadPoints):
-    """Translate address point values to NAD domain values."""
-    with arcpy.da.UpdateCursor(nadPoints,
-                               ['St_PreDir', 'St_PosDir', 'St_PosTyp', 'County']) as cursor:
+    """Translate address point values and a tribe value to NAD domain values."""
+    fields = ['St_PreDir', 'St_PosDir', 'St_PosTyp', 'County', 'NatAmArea']
+    with arcpy.da.UpdateCursor(nadPoints, fields) as cursor:
         for row in cursor:
-            row[0] = directionDomain.get(row[0], None)
-            row[1] = directionDomain.get(row[1], None)
-            row[2] = streetDomain.get(row[2], None)
-            row[3] = countyFipsDomain.get(row[3], None)
+            row = [
+                directionDomain.get(row[0], None),
+                directionDomain.get(row[1], None),
+                streetDomain.get(row[2], None),
+                countyFipsDomain.get(row[3], None),
+                tribeDomain.get(row[4], None),
+            ]
             cursor.updateRow(row)
 
 
