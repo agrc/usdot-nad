@@ -197,7 +197,7 @@ def calculateNatAmArea(nadPoints):
 
     arcpy.SpatialJoin_analysis(nadPoints, polygon_layer, output_joined, "JOIN_ONE_TO_ONE", "KEEP_ALL", match_option="INTERSECT")
 
-    tribe_dict = {row[1]: row[0] for row in arcpy.da.SearchCursor(output_joined, ["tribe", "TARGET_FID"])}
+    tribe_dict = {row[1]: row[0] for row in arcpy.da.SearchCursor(output_joined, ["label_tribe", "TARGET_FID"])}
 
     with arcpy.da.UpdateCursor(nadPoints, ["NatAmArea", "OBJECTID"]) as update_cursor:
         for row in update_cursor:
