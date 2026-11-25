@@ -4,7 +4,7 @@ ETL for SGID address points to national address dataset (NAD).
 #only 3 of UGRC SGID Address Point fields are not used to match: OBJECTID, PtLocation, Structure
 #2 NAD Always Used fields are not populated: Urbnztn_PR, UUID
 
-Estimate Time: 
+Estimate Time:
 - projected address data has been downloaded locally (option 2): 3 h 20 m
 """
 import arcpy
@@ -137,15 +137,15 @@ def translateValues(nadPoints):
             ]
             cursor.updateRow(row)
 
-def populateNewFields(nadPoints): 
+def populateNewFields(nadPoints):
     """Populate added fields with values that fit NAD domains."""
     fields = [
-        'SHAPE@X', 'SHAPE@Y', 'Longitude', 'Latitude', 'NAD_Source', 
+        'SHAPE@X', 'SHAPE@Y', 'Longitude', 'Latitude', 'NAD_Source',
         'St_Name', 'St_PreTyp', 'AddNo_Full', 'Add_Number', 'AddNum_Suf', 'AddrPoint'
     ]
     highway_prefixes = ['HIGHWAY ', 'HWY ', 'US ', 'SR ']
     old_highway_prefixes = ['OLD HIGHWAY ', 'OLD HWY ']
-    
+
     with arcpy.da.UpdateCursor(nadPoints, fields, spatial_reference=arcpy.SpatialReference(4326)) as cursor:
         for row in cursor:
             # Assign coordinate-based fields
@@ -164,7 +164,7 @@ def populateNewFields(nadPoints):
                 if street_name.startswith(prefix):
                     row[6], row[5] = prefix.strip(), street_name[len(prefix):]
                     break
-            
+
             row[7] = f"{row[8]} {row[9]}" if row[9] else row[8]
             cursor.updateRow(row)
 
@@ -181,23 +181,23 @@ def preProccessAddressPoints(sgidPoints):
         with arcpy.da.UpdateCursor(sgidPoints, ['OID@'], where_clause) as cursor:
             for _ in cursor:
                 cursor.deleteRow()
-        
+
         print(f"Removed {len(non_digit_oids)} points: {where_clause}")
 
 def calculateNatAmArea(nadPoints):
     """Spatially joins tribal lands to NAD points and updates the 'NatAmArea' field."""
-    land_ownership_url = "https://gis.trustlands.utah.gov/mapping/rest/services/Land_Ownership/FeatureServer/0"
+    land_ownership_url = "https://gis.trustlands.utah.gov/mapping/rest/services/Land_Ownership_Agency/FeatureServer/0"
     local_tribal_lands = "in_memory/local_tribal_lands"
 
     if not arcpy.Exists(local_tribal_lands):
         arcpy.CopyFeatures_management(land_ownership_url, local_tribal_lands)
 
-    polygon_layer = arcpy.MakeFeatureLayer_management(local_tribal_lands, "tribal_lands", "state_lgd = 'Tribal Lands'")
+    polygon_layer = arcpy.MakeFeatureLayer_management(local_tribal_lands, "tribal_lands", "land_owner = 'BIA'")
     output_joined = "in_memory/joined_NatAmArea"
 
     arcpy.SpatialJoin_analysis(nadPoints, polygon_layer, output_joined, "JOIN_ONE_TO_ONE", "KEEP_ALL", match_option="INTERSECT")
 
-    tribe_dict = {row[1]: row[0] for row in arcpy.da.SearchCursor(output_joined, ["tribe", "TARGET_FID"])}
+    tribe_dict = {row[1]: row[0] for row in arcpy.da.SearchCursor(output_joined, ["label_tribe", "TARGET_FID"])}
 
     with arcpy.da.UpdateCursor(nadPoints, ["NatAmArea", "OBJECTID"]) as update_cursor:
         for row in update_cursor:
@@ -241,7 +241,7 @@ def calc_Post_City(nadPoints):
     rest_zip5_field = "ZIP5"
     rest_name_field = "NAME"
 
-    
+
     # Create an update cursor for the point layer
     with arcpy.da.UpdateCursor(nadPoints, [zip_code_field, post_city_field]) as update_cursor:
         for row in update_cursor:
@@ -273,16 +273,16 @@ def calc_street(nadPoints):
         for row in cursor:
             # Handle None values
             parts = [row[i] if row[i] is not None else '' for i in range(5)]
-            
+
             # Construct the full street name
             new_value = re.sub(r'\s+', ' ', " ".join(parts).strip())
-            
+
             # Update only if there is a change
             if row[5] != new_value:
                 row[5] = new_value
                 cursor.updateRow(row)
                 update_count += 1
-    
+
     print("Total count of updates to {0}: {1}".format(fields[5], update_count))
 
 def blanks_to_nulls(nadPoints):
@@ -340,7 +340,7 @@ if __name__ == '__main__':
                                                         out_dataset=os.path.join(address_points_local_gdb, 'AddressPointsProject'),
                                                         out_coor_system=3857,
                                                         transform_method="WGS_1984_(ITRF00)_To_NAD_1983")[0]
-    
+
     #: use option 2 if you already have the sgid address points downloaded locally (and comment out the code block above)
 
     #Option 2
